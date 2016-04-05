@@ -2,6 +2,15 @@
 	
 }
 
+#instr {
+	border: 1px;
+	text-align: center;
+}
+
+#instr td{
+	width: 80px;
+}
+
 #go {
 	display: none;
 }

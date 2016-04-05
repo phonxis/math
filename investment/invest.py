@@ -1,33 +1,47 @@
-import random
 
-class Investment():
 
+# объявление класса
+class Investment:
+    # инициализазия переменных класса
     def __init__(self, number_of_enterprises, req_dict, numb_of_rows):
-        #self.number_of_projects = number_of_projects
+        # количество предприятий
         self.number_of_enterprises = number_of_enterprises
+        # данные из таблицы
         self.data = req_dict
+        # количество строчек таблицы
         self.numb_of_rows = numb_of_rows
         self.number_of_answers = 0
 
+    # метод для превращения исходных данных:
+    #   'R11': '11', 'R21': '13', 'R31': '10', 'X1': '5',
+    #   'R12': '16', 'R22': '15', 'R32': '17', 'X2': '10',
+    #   'R13': '23', 'R23': '21', 'R33': '22', 'X3': '15',
+    #   'R14': '28', 'R24': '29', 'R34': '28', 'X4': '20',
+    #   'R15': '34', 'R25': '37', 'R35': '36', 'X5': '25'
+
+    # в удобный для рассчета вид:
+    #   {'company1': [{
+    #           'project5': {'C1': '25', 'R1': '34'},
+    #           'project2': {'C1': '10', 'R1': '16'},
+    #           'project4': {'C1': '20', 'R1': '28'},
+    #           'project3': {'C1': '15', 'R1': '23'},
+    #           'project1': {'C1': '5', 'R1': '11'}}],
+    #   'company2': [{
+    #           'project5': {'R2': '37', 'C2': '25'},
+    #           'project2': {'R2': '15', 'C2': '10'},
+    #           'project4': {'R2': '29', 'C2': '20'},
+    #           'project3': {'R2': '21', 'C2': '15'},
+    #           'project1': {'R2': '13', 'C2': '5'}}],
+    #   'company3': [{
+    #           'project5': {'C3': '25', 'R3': '36'},
+    #           'project2': {'C3': '10', 'R3': '17'},
+    #           'project4': {'C3': '20', 'R3': '28'},
+    #           'project3': {'C3': '15', 'R3': '22'},
+    #           'project1': {'C3': '5', 'R3': '10'}}
+    #   ]}
     def create_dictionary(self):
         l = []
         enterprises = []
-        '''cr = {   'C11': 0, 'R11': 0,
-                                        'C12': 1, 'R12': 3,
-                                        'C13': None, 'R13': None,
-                        
-                                        'C21': 0, 'R21': 0,
-                                        'C22': 3, 'R22': 5,
-                                        'C23': 5, 'R23': 9,
-                        
-                                        'C31': 0, 'R31': 0,
-                                        'C32': 1, 'R32': 4,
-                                        'C33': 2, 'R33': 6,
-                        
-                                        'C41': 0, 'R41': 0,
-                                        'C42': 2, 'R42': 3,
-                                        'C43': None, 'R43': None,
-                                }'''
         copy = {}
         numb_of_proj = 0
 
@@ -40,7 +54,7 @@ class Investment():
                     list_rs.append(self.data[index])
                     index_x = 'X'+str(proj)
                     dd[index_x] = [index, self.data[index]]
-            #print(list_rs, dd)
+            #print(dd)
             index_pred = 'company'+str(pred)
             copy[index_pred] = dd.copy()
             numb_of_proj = max(numb_of_proj, len(list_rs))
@@ -88,110 +102,188 @@ class Investment():
 
         return numb_of_proj, d
 
+    # вычесление таблицы результатов поетапно
+    # количество етапом равно количеству компаний
+    # сначала вычисляются результаты для последней компании, потом пред последней, ... потом первой
+    # возвращает результат типа:
+    #       {'y05_pr1': 10, 'y10_pr2': 17, 'y15_pr3': 22, 'y20_pr4': 28, 'y25_pr5': 36}
+    # результат определяет сколько нужно вложить в эту компанию и какой будет доход и учетом вложений в другие компании
     @staticmethod
-    def etap(d=None, numb_of_rows=None, numb_of_projects=None, numb_of_companies=None, et=None, f=None):
+    def etap(d=None, numb_of_rows=None, numb_of_projects=None, numb_of_companies=None, et=None, xs=None, f=None):
         data_etap = {}
-        dict_f = {}
-        print("ETAP\t", et)
-        if f == None:
-            for i in range(1, numb_of_projects+1):
-                perem = 'pr' + str(i) + '_c' + str(et)  #вместо numb_of_comp наверное должно быть et
-                data_etap[perem] = {}
-            #print("data etap\t", data_etap)
-            for i in range(1, numb_of_projects+1):
-                perem = 'pr' + str(i) + '_c' + str(et)
-                if d['company'+str(et)][0]['project'+str(i)]['C'+str(et)] == None:
-                    #pass
-                    data_etap[perem] = None
-                else:
-                    r = int(d['company'+str(et)][0]['project'+str(i)]['C'+str(et)])
-                    #print("r\t", r)
-                    for ii in range(numb_of_rows-1, r-1, -1):
-                        y = 'y'+str(ii)                                                         # ИЗМЕНЕНО
-                        data_etap[perem][y] = d['company'+str(et)][0]['project'+str(i)]['R'+str(et)]
-                        if ii == r and ii != 0:
-                            for p in range(ii-1, -1, -1):
-                                y = 'y'+str(p)                                                    #ИЗМЕНЕНО
+
+        #print("ETAP\t", et)
+        if f is None:
+            if xs is None:
+                for i in range(1, numb_of_projects+1):
+                    perem = 'pr' + str(i) + '_c' + str(et)
+                    data_etap[perem] = {}
+                for i in range(1, numb_of_projects+1):
+                    perem = 'pr' + str(i) + '_c' + str(et)
+                    if d['company'+str(et)][0]['project'+str(i)]['C'+str(et)] is None:
+                        data_etap[perem] = None
+                    else:
+                        r = int(d['company'+str(et)][0]['project'+str(i)]['C'+str(et)])
+                        for ii in range(numb_of_rows-1, r-1, -1):
+                            y = 'y'+str(ii)
+                            data_etap[perem][y] = d['company'+str(et)][0]['project'+str(i)]['R'+str(et)]
+                            if ii == r and ii != 0:
+                                for p in range(ii-1, -1, -1):
+                                    y = 'y'+str(p)
+                                    data_etap[perem][y] = None
+            else:
+                for i in range(1, numb_of_projects+1):
+                    perem = 'pr' + str(i) + '_c' + str(et)
+                    data_etap[perem] = {}
+                for i in range(1, numb_of_projects+1):
+                    perem = 'pr' + str(i) + '_c' + str(et)
+                    if d['company'+str(et)][0]['project'+str(i)]['C'+str(et)] is None:
+                        data_etap[perem] = None
+                    else:
+                        r = int(d['company'+str(et)][0]['project'+str(i)]['C'+str(et)])
+                        for x in sorted(xs):
+                            if x < r:
+                                if x < 10:
+                                    y = 'y0'+str(x)
+                                    data_etap[perem][y] = None
+                                else:
+                                    y = 'y'+str(x)
                                 data_etap[perem][y] = None
+                            else:
+                                if x < 10:
+                                    y = 'y0'+str(x)
+                                    data_etap[perem][y] = d['company'+str(et)][0]['project'+str(i)]['R'+str(et)]
+                                else:
+                                    y = 'y'+str(x)
+                                    data_etap[perem][y] = d['company'+str(et)][0]['project'+str(i)]['R'+str(et)]
         else:
-            for i in range(1, numb_of_projects+1):
-                perem = 'pr' + str(i) + '_c' + str(et)  #вместо numb_of_comp наверное должно быть et
-                data_etap[perem] = {}
-            #print(data_etap)
-            for i in range(1, numb_of_projects+1):
-                perem = 'pr' + str(i) + '_c' + str(et)
-                if d['company'+str(et)][0]['project'+str(i)]['C'+str(et)] == None:
-                    #pass
-                    data_etap[perem] = None
-                else:
-                    r = int(d['company'+str(et)][0]['project'+str(i)]['C'+str(et)])
-                    #print(r)
-                    for ii in range(numb_of_rows-1, r-1, -1):
-                        y = 'y'+str(ii)                                                         # ИЗМЕНЕНО
-                        #print(y, perem)
-                        data_etap[perem][y] = d['company'+str(et)][0]['project'+str(i)]['R'+str(et)]
-                        if ii == r and ii != 0:
-                            for p in range(ii-1, -1, -1):
-                                y = 'y'+str(p)                                                    #ИЗМЕНЕНО
-                                data_etap[perem][y] = None
+            if xs is None:
+                for i in range(1, numb_of_projects+1):
+                    perem = 'pr' + str(i) + '_c' + str(et)
+                    data_etap[perem] = {}
+                for i in range(1, numb_of_projects+1):
+                    perem = 'pr' + str(i) + '_c' + str(et)
+                    if d['company'+str(et)][0]['project'+str(i)]['C'+str(et)] is None:
+                        data_etap[perem] = None
+                    else:
+                        r = int(d['company'+str(et)][0]['project'+str(i)]['C'+str(et)])
+                        for ii in range(numb_of_rows-1, r-1, -1):
+                            y = 'y'+str(ii)
+                            data_etap[perem][y] = d['company'+str(et)][0]['project'+str(i)]['R'+str(et)]
+                            if ii == r and ii != 0:
+                                for p in range(ii-1, -1, -1):
+                                    y = 'y'+str(p)
+                                    data_etap[perem][y] = None
 
-            #print(data_etap)
-            for k in sorted(data_etap.keys()):
-                #print(k)
-                if_none = 0
-                if data_etap[k] != None:
-                    for enum, key_y in enumerate(sorted(data_etap[k].keys())):
-                        #print(enum, key_y)
-                        if data_etap[k][key_y] != None:
-                            f_keys = sorted(f.keys())[enum-if_none]
-                            #print(f[f_keys])
-                            #print("f", f[key_f])
-                            #print(data_etap[k][key_y] + "+" + str(f[f_keys]))
-                            data_etap[k][key_y] = str(int(data_etap[k][key_y]) + int(f[f_keys]))
-                        else:
-                            if_none += 1
-        print("data etap", data_etap)
+                for k in sorted(data_etap.keys()):
+                    if_none = 0
+                    if data_etap[k] is not None:
+                        for enum, key_y in enumerate(sorted(data_etap[k].keys())):
+                            if data_etap[k][key_y] is not None:
+                                f_keys = sorted(f.keys())[enum-if_none]
+                                data_etap[k][key_y] = str(int(data_etap[k][key_y]) + int(f[f_keys]))
+                            else:
+                                if_none += 1
+            else:
+                for i in range(1, numb_of_projects+1):
+                    perem = 'pr' + str(i) + '_c' + str(et)
+                    data_etap[perem] = {}
+                for i in range(1, numb_of_projects+1):
+                    perem = 'pr' + str(i) + '_c' + str(et)
+                    if d['company'+str(et)][0]['project'+str(i)]['C'+str(et)] is None:
+                        data_etap[perem] = None
+                    else:
+                        r = int(d['company'+str(et)][0]['project'+str(i)]['C'+str(et)])
+                        for x in sorted(xs):
+                            if x < r:
+                                if x < 10:
+                                    y = 'y0'+str(x)
+                                    data_etap[perem][y] = None
+                                else:
+                                    y = 'y'+str(x)
+                                    data_etap[perem][y] = None
+                            else:
+                                if x < 10:
+                                    y = 'y0'+str(x)
+                                    data_etap[perem][y] = d['company'+str(et)][0]['project'+str(i)]['R'+str(et)]
+                                else:
+                                    y = 'y'+str(x)
+                                    data_etap[perem][y] = d['company'+str(et)][0]['project'+str(i)]['R'+str(et)]
 
+                for k in sorted(data_etap.keys()):
+                    if_none = 0
+                    if data_etap[k] is not None:
+                        for enum, key_y in enumerate(sorted(data_etap[k].keys())):
+                            if data_etap[k][key_y] is not None:
+                                f_keys = sorted(f.keys())[enum-if_none]
+                                data_etap[k][key_y] = str(int(data_etap[k][key_y]) + int(f[f_keys]))
+                            else:
+                                if_none += 1
+        #print(data_etap)
         data_y = {}
         max_values = []
         max_values_key = []
         max_vals = {}
-        for ii in range(0, numb_of_rows):
-            for k in data_etap.keys():
-                if data_etap[k] == None:
-                    #print('none')
-                    pass
-                else:
-                    #print('yeah')
-                    y = 'y'+str(ii)
-                    if data_etap[k][y] == None:
-                        max_values.append(-1)
-                        max_values_key.append(k+y)
-                        max_vals[k+y] = -1
+        if xs is None:
+            for ii in range(0, numb_of_rows):
+                for k in data_etap.keys():
+                    if data_etap[k] is None or data_etap[k] == {}:
+                        pass
                     else:
-                        max_values.append(int(data_etap[k][y]))
-                        max_values_key.append(k+y)
-                        max_vals[k+y] = int(data_etap[k][y])
-            #print("max_values_key\t", max_values_key)
-            #print("max_values\t", max_values)
-            #print("max_vals\t", max_vals)
-            max_value = max(max_vals.values())
-            if max_values.count(max_value) > 1:
-                pass
+                        y = 'y'+str(ii)
+                        if data_etap[k][y] is None:
+                            max_values.append(-1)
+                            max_values_key.append(k+y)
+                            max_vals[k+y] = -1
+                        else:
+                            max_values.append(int(data_etap[k][y]))
+                            max_values_key.append(k+y)
+                            max_vals[k+y] = int(data_etap[k][y])
+                max_value = max(max_vals.values())
+                if max_values.count(max_value) > 1:
+                    pass
 
-            key_for_data_y = max_values_key[max_values.index(max_value)]
-            #print(key_for_data_y.split('_'))
-            key_for_data_y = key_for_data_y.split('_')[1][-2:] + '_' + key_for_data_y.split('_')[0]
-            data_y[key_for_data_y] = max_value
-            #print("key_for_data_y\t", key_for_data_y)
-            #print(max_value, '\n')
+                key_for_data_y = max_values_key[max_values.index(max_value)]
+                key_for_data_y = key_for_data_y.split('_')[1][-2:] + '_' + key_for_data_y.split('_')[0]
+                data_y[key_for_data_y] = max_value
 
-            max_values = []
-            max_values_key = []
-            max_vals = {}
+                max_values = []
+                max_values_key = []
+                max_vals = {}
+        else:
+            for ii in sorted(xs):
+                for k in data_etap.keys():
+                    if data_etap[k] is None:
+                        pass
+                    else:
+                        if ii < 10:
+                            y = 'y0'+str(ii)
+                        else:
+                            y = 'y'+str(ii)
+                        if data_etap[k][y] is None:
+                            max_values.append(-1)
+                            max_values_key.append(k+y)
+                            max_vals[k+y] = -1
+                        else:
+                            max_values.append(int(data_etap[k][y]))
+                            max_values_key.append(k+y)
+                            max_vals[k+y] = int(data_etap[k][y])
+                max_value = max(max_vals.values())
+                if max_values.count(max_value) > 1:
+                    pass
+                key_for_data_y = max_values_key[max_values.index(max_value)]
+                if int(key_for_data_y.split('_')[1].split('y')[1]) < 10:
+                    key_for_data_y = 'y' + key_for_data_y.split('_')[1].split('y')[1] + '_' + key_for_data_y.split('_')[0]
+                else:
+                    key_for_data_y = 'y' + key_for_data_y.split('_')[1].split('y')[1] + '_' + key_for_data_y.split('_')[0]
+                data_y[key_for_data_y] = max_value
+                max_values = []
+                max_values_key = []
+                max_vals = {}
         return data_y
 
-    def find_maximums(self, aa, n_of_projects):
+    # метод который вызывает пред. метод (etap) и собирает результаты в единый словарь
+    def find_maximums(self, aa, n_of_projects, xs):
         """aa - invest dict"""
         et = self.number_of_enterprises
         result_fs = {}
@@ -200,114 +292,99 @@ class Investment():
         numb_of_proj = n_of_projects
         numb_of_companies = self.number_of_enterprises
         for e in range(et, 0, -1):
-            #print('ETAP ' + str(e))
             ep = 'ETAP ' + str(e)
-            f= self.etap(aa, n_of_rows, numb_of_proj, numb_of_companies, e, f)
+            f= self.etap(aa, n_of_rows, numb_of_proj, numb_of_companies, e, xs, f)
             result_fs[ep] = f
             #print("f", f)
             #print('\n')
         return result_fs
 
-    def return_result(self, aa, result_fs):
+    # метод возвращает окончательные результаты, в виде оптимальных значений вложения для каждой компании
+    #       ['15', '5', '5']
+    def return_result(self, aa, result_fs, xs):
         """aa - invest dict"""
         et = self.number_of_enterprises
-        summ_of_money = self.numb_of_rows - 1
+        if xs is None:
+            summ_of_money = self.numb_of_rows - 1
+        else:
+            summ_of_money = sorted(xs)[-1]
         max_val_etap = -1
         result_proj = []
+        skips = 0
+        skip_int = self.number_of_enterprises - 1
+        #print("skip\t", skip_int)
         for i in range(1, et+1):
             ep = 'ETAP ' + str(i)
-            #print(result_fs[ep])
             for v in sorted(result_fs[ep].keys(), reverse=True):
                 company = 'company' + str(i)
                 proj = 'project' + str(v[-1])
                 c = 'C' + str(i)
-                yy = 'y' + str(v[1:2])
-                #print("yy", yy[-1], "money", summ_of_money)
-                #print("money - ", summ_of_money, "from d- ", aa[company][0][proj][c], "y-", yy[-1])
-                if summ_of_money >= int(aa[company][0][proj][c]) and int(yy[-1]) == summ_of_money:
-                    #print("max- ", max_val_etap, "res- ", result_fs[ep][v])
+                yy = 'y' + str(v.split('_')[0].split('y')[1])
+                #print("money - ", summ_of_money, "from d- ", aa[company][0][proj][c], "y-", str(int(yy.split('y')[1])))
+                if summ_of_money >= int(aa[company][0][proj][c]) and int(yy.split('y')[1]) <= summ_of_money:
+                    if xs is not None:
+                        #print("xs0\t", sorted(xs)[0], "skip_int\t", skip_int)
+                        if sorted(xs)[0] != 0 and skip_int > 0:
+                            skip_int -= 1
+                            continue
                     if max_val_etap < result_fs[ep][v]:
                         max_val_etap = result_fs[ep][v]
                         summ_of_money -= int(aa[company][0][proj][c])
                         result_proj.append(proj)
-                        #print("money", summ_of_money)
-
-            #print("\tmax", max_val_etap)
+            skips += 1
+            skip_int = self.number_of_enterprises - 1 - skips
             max_val_etap = 0
 
-        #print("project list- \t", result_proj)
         return result_proj
 
 if __name__ == '__main__':
-    request_dict = {'R11': '0', 'R21': '0', 'R31': '0', 'R41': '0', 'X1': '0',
-                                'R12': '3', 'R22': '0', 'R32': '4', 'R42': '0', 'X2': '1',
-                                'R13': '3', 'R23': '0', 'R33': '6', 'R43': '3', 'X3': '2',
-                                'R14': '3', 'R24': '5', 'R34': '6', 'R44': '3', 'X4': '3',
-                                'R15': '3', 'R25': '5', 'R35': '6', 'R45': '3', 'X5': '4',
-                                'R16': '3', 'R26': '9', 'R36': '6', 'R46': '3', 'X6': '5'
-                }
+    # request_dict = {'R11': '0', 'R21': '0', 'R31': '0', 'R41': '0', 'X1': '0',
+    #                'R12': '3', 'R22': '0', 'R32': '4', 'R42': '0', 'X2': '1',
+    #                'R13': '3', 'R23': '0', 'R33': '6', 'R43': '3', 'X3': '2',
+    #                'R14': '3', 'R24': '5', 'R34': '6', 'R44': '3', 'X4': '3',
+    #                'R15': '3', 'R25': '5', 'R35': '6', 'R45': '3', 'X5': '4',
+    #                'R16': '3', 'R26': '9', 'R36': '6', 'R46': '3', 'X6': '5'
+    #            }
+    request_dict = {'R11': '11', 'R21': '13', 'R31': '10', 'X1': '5',
+                    'R12': '16', 'R22': '15', 'R32': '17', 'X2': '10',
+                    'R13': '23', 'R23': '21', 'R33': '22', 'X3': '15',
+                    'R14': '28', 'R24': '29', 'R34': '28', 'X4': '20',
+                    'R15': '34', 'R25': '37', 'R35': '36', 'X5': '25'
+                    }
+    rows = 5
+    companies = 3
 
-    rows = 6
-    companies = 4
-    #print(data)
+    # /////////////////////////////////
+    if int(request_dict['X2']) - int(request_dict['X1']) > 1 or int(request_dict['X1']) != 0:
+        xs = []
+        for x in request_dict:
+            if 'X' in x:
+                xs.append(int(request_dict[x]))
+        #print(sorted(xs))
+    else:
+        xs = None
+    # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+    #print("XS\t\t", xs)
+
     invest_obj = Investment(number_of_enterprises=companies, req_dict=request_dict, numb_of_rows=rows)
     n_of_proj, invest_dict = invest_obj.create_dictionary()
     print("invest_dict", invest_dict, "\nn_of_proj", n_of_proj)
-    res_fs = invest_obj.find_maximums(invest_dict, n_of_proj)
-    print("res_fs", res_fs)
-    invest_result =invest_obj.return_result(invest_dict, res_fs)
+
+    res_fs = invest_obj.find_maximums(invest_dict, n_of_proj, xs)
+    #print("res_fs", res_fs)
+
+    invest_result = invest_obj.return_result(invest_dict, res_fs, xs)
     print("invest_result", invest_result)
-    #e = invest_obj.etap(invest_dict, rows, n_of_proj, companies, companies)
-    #print(e)
-    if invest_obj.number_of_answers > 1:
-        print("Задача має {0} рішення".format(invest_obj.number_of_answers))
-    """numb_of_rows = 6
-                a = Investment(4, request_dict, numb_of_rows)
-                nn, aa= a.create_dictionary()
-                print("aa", aa)
-            
-                #print(aa)
-            
-                numb_of_companies = 4
-                numb_of_rows = 6
-                numb_of_projects = 3
-                summ_of_money = 5
-                et = numb_of_companies
-            
-            
-                result_fs = {}
-                f = None
-                for e in range(et, 0, -1):
-                    print('ETAP ' + str(e))
-                    ep = 'ETAP ' + str(e)
-                    f = a.etap(aa, numb_of_rows, numb_of_projects, numb_of_companies, e, f)
-                    result_fs[ep] = f
-                    print("f", f)
-                    print('\n')
-            
-                max_val_etap = -1
-                result_proj = []
-                for i in range(1, et+1):
-                    ep = 'ETAP ' + str(i)
-                    #print(result_fs[ep])
-                    for v in sorted(result_fs[ep].keys(), reverse=True):
-                        company = 'company' + str(i)
-                        proj = 'project' + str(v[-1])
-                        c = 'C' + str(i)
-                        yy = 'y' + str(v[1:2])
-                        #print("yy", yy[-1], "money", summ_of_money)
-                        print("money - ", summ_of_money, "from d- ", aa[company][0][proj][c], "y-", yy[-1])
-                        if summ_of_money >= int(aa[company][0][proj][c]) and int(yy[-1]) == summ_of_money:
-                            print("max- ", max_val_etap, "res- ", result_fs[ep][v])
-                            if max_val_etap < result_fs[ep][v]:
-                                max_val_etap = result_fs[ep][v]
-                                summ_of_money -= int(aa[company][0][proj][c])
-                                result_proj.append(proj)
-                                print("money", summ_of_money)
-            
-                    print("\tmax", max_val_etap)
-                    max_val_etap = 0
-            
-                print("project list- \t", result_proj)"""
 
-
+    our_result = []
+    max_revenue = 0
+    s = ""
+    for i in range(len(invest_result)):
+        comp = 'company' + str(i+1)
+        c = 'C' + str(i+1)
+        r = 'R' + str(i+1)
+        our_result.append(invest_dict[comp][0][invest_result[i]][c])
+        max_revenue += int(invest_dict[comp][0][invest_result[i]][r])
+        s += "В компанію №{} треба вложити {} у.о.\n".format(i+1, our_result[i])
+    s += "Максимальний дохід від інвестування -- {}".format(max_revenue)
+    print("result\t", our_result, "max_revenue\t", max_revenue)
